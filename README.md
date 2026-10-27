@@ -1,6 +1,6 @@
-# HaulMP ⇄ TruckersMP — Derivative Code Analysis
+# HaulMP ⇄ TruckersMP / Derivative Code Analysis
 
-*Research: Dizcat — Markdown layout & formatting: DeepSeek V4*
+*Research: Dizcat / Markdown layout & formatting: DeepSeek V4*
 
 ## Verdict
 
@@ -12,10 +12,10 @@ HaulMP's client DLL is derived from TruckersMP's client code. Once relocations a
 
 | Version | Method | Conclusion |
 |---|---|---|
-| v1.0 | Raw byte comparison only | "Similarity limited to the Opus audio codec — no code copied" |
-| v2.0 | Relocation-normalised matching, RTTI demangling, PE metadata forensics | "Code copied — HaulMP is a derivative of TruckersMP" |
+| v1.0 | Raw byte comparison only | "Similarity limited to the Opus audio codec / no code copied" |
+| v2.0 | Relocation-normalised matching, RTTI demangling, PE metadata forensics | "Code copied / HaulMP is a derivative of TruckersMP" |
 
-v1.0 wasn't wrong, just shallow. Raw byte comparison across two independently linked binaries finds almost nothing in `.text`, because every absolute address, every relative call and every jump target differs after linking. Code identity only shows up once you normalise relocations. v1.0 stopped at the un-normalised `.rdata` constant tables — which are third-party — and drew its conclusion from those alone. v2.0 takes the remaining step.
+v1.0 wasn't wrong, just shallow. Raw byte comparison across two independently linked binaries finds almost nothing in `.text`, because every absolute address, every relative call and every jump target differs after linking. Code identity only shows up once you normalise relocations. v1.0 stopped at the un-normalised `.rdata` constant tables / which are third-party / and drew its conclusion from those alone. v2.0 takes the remaining step.
 
 This document supersedes v1.0.
 
@@ -27,11 +27,11 @@ This document supersedes v1.0.
 2. [Why quick checks say "no copying" (and are wrong)](#2-why-quick-checks-say-no-copying-and-are-wrong)
 3. [Reference builds (pinned)](#3-reference-builds-pinned)
 4. [Method](#4-method)
-5. [Evidence 1 — Function-level identity in `.text`](#5-evidence-1--function-level-identity-in-text)
-6. [Evidence 2 — Identical RTTI class names](#6-evidence-2--identical-rtti-class-names)
-7. [Evidence 3 — Leaked build tree](#7-evidence-3--leaked-build-tree)
-8. [Evidence 4 — PE metadata and compiler fingerprint](#8-evidence-4--pe-metadata-and-compiler-fingerprint)
-9. [Evidence 5 — `.pdata` unwind layout](#9-evidence-5--pdata-unwind-layout)
+5. [Evidence 1 / Function-level identity in `.text`](#5-evidence-1--function-level-identity-in-text)
+6. [Evidence 2 / Identical RTTI class names](#6-evidence-2--identical-rtti-class-names)
+7. [Evidence 3 / Leaked build tree](#7-evidence-3--leaked-build-tree)
+8. [Evidence 4 / PE metadata and compiler fingerprint](#8-evidence-4--pe-metadata-and-compiler-fingerprint)
+9. [Evidence 5 / `.pdata` unwind layout](#9-evidence-5--pdata-unwind-layout)
 10. [Not evidence: the Opus constant tables](#10-not-evidence-the-opus-constant-tables)
 11. [Pattern signatures](#11-pattern-signatures)
 12. [Scorecard](#12-scorecard)
@@ -50,7 +50,7 @@ This document supersedes v1.0.
 
 **In scope.** Two native Windows x64 PE binaries.
 
-**Out of scope.** Resources, assets, shaders, configs, game data. Licence compliance isn't assessed — "derived" is a technical statement, not a legal one.
+**Out of scope.** Resources, assets, shaders, configs, game data. Licence compliance isn't assessed / "derived" is a technical statement, not a legal one.
 
 ---
 
@@ -78,7 +78,7 @@ So the lazy check returns "0 TruckersMP strings, a few KB of identical data that
 
 ## 3. Reference builds (pinned)
 
-All figures below are tied to these exact binaries. Different builds shift the counts, which is deliberate — it makes the report hard to falsify without doing the work.
+All figures below are tied to these exact binaries. Different builds shift the counts, which is deliberate / it makes the report hard to falsify without doing the work.
 
 | | Side A | Side B |
 |---|---|---|
@@ -100,7 +100,7 @@ Side B was linked ~19 months after Side A, so derivation runs A → B, not the r
 ## 4. Method
 
 1. **Section parsing.** Locate `.text`, `.rdata`, `.data`, `.pdata` in both binaries.
-2. **Function boundary recovery.** Recover function extents from `.pdata` `RUNTIME_FUNCTION` entries (x64 exception directory) — reliable even without symbols.
+2. **Function boundary recovery.** Recover function extents from `.pdata` `RUNTIME_FUNCTION` entries (x64 exception directory) / reliable even without symbols.
 3. **Relocation normalisation.** Mask absolute addresses and relative displacements, then compare function bodies.
 4. **Similarity scoring.** Per-function byte identity ratio on normalised bodies.
 5. **Thresholding.** Retain pairs ≥ 0.95; count exact 1.000 separately.
@@ -112,7 +112,7 @@ Step 8 is what separates this report from v1.0.
 
 ---
 
-## 5. Evidence 1 — Function-level identity in `.text`
+## 5. Evidence 1 / Function-level identity in `.text`
 
 After relocation normalisation, HaulMP's `.text` (2,914,304 B) and TruckersMP's `.text` (4,206,592 B) share a substantial body of identical machine code.
 
@@ -125,7 +125,7 @@ After relocation normalisation, HaulMP's `.text` (2,914,304 B) and TruckersMP's 
 | Matched bytes | 731,648 B |
 | Share of HaulMP `.text` | 25.1 % |
 
-512 of 12,408 functions is 4.1% by count, but 25.1% by bytes. The matching functions are the large, complex ones — state machines, packet handlers, managers — which is the signature of copied core logic, not coincidental boilerplate.
+512 of 12,408 functions is 4.1% by count, but 25.1% by bytes. The matching functions are the large, complex ones / state machines, packet handlers, managers / which is the signature of copied core logic, not coincidental boilerplate.
 
 ### Top matches
 
@@ -146,7 +146,7 @@ A 4,112-byte function at exact byte identity after normalisation, in two indepen
 
 ---
 
-## 6. Evidence 2 — Identical RTTI class names
+## 6. Evidence 2 / Identical RTTI class names
 
 Eleven class names recovered from RTTI on both sides, identical after demangling:
 
@@ -159,15 +159,15 @@ ScoreboardEntry         ChatChannel
 
 Three of these are too specific to be convergent naming:
 
-- `GhostModeHandler` — TruckersMP's non-collision "ghost mode" feature. A HaulMP author inventing a name from scratch would not land on the same coinage.
-- `SpawnSuppressor` — suppresses traffic/AI spawns in convoy sessions. Same reasoning.
-- `ConvoyBeacon` — convoy beacon broadcast.
+- `GhostModeHandler` / TruckersMP's non-collision "ghost mode" feature. A HaulMP author inventing a name from scratch would not land on the same coinage.
+- `SpawnSuppressor` / suppresses traffic/AI spawns in convoy sessions. Same reasoning.
+- `ConvoyBeacon` / convoy beacon broadcast.
 
 Generic names like `VehicleManager` prove little. `SpawnSuppressor` proves a lot.
 
 ---
 
-## 7. Evidence 3 — Leaked build tree
+## 7. Evidence 3 / Leaked build tree
 
 TruckersMP compiles from a build root named `C:\builds\game\` (visible in its Opus paths, e.g. `C:\builds\game\opus\celt\pitch.c`). HaulMP also carries `C:\builds\game\` paths, while its own newer modules sit under a different root.
 
@@ -175,8 +175,8 @@ TruckersMP compiles from a build root named `C:\builds\game\` (visible in its Op
 |---|---|
 | Literal string `TruckersMP` in HaulMP | 0 |
 | Shared literal strings, both binaries | 214 |
-| — of which: source-path strings | 61 |
-| — of which: source-path strings under `C:\builds\game\` | 61 |
+| / of which: source-path strings | 61 |
+| / of which: source-path strings under `C:\builds\game\` | 61 |
 
 The 0 for the literal name is the trap from §2: there is nothing to grep. But 61 source paths sharing the exact root `C:\builds\game\src\...` mean those translation units were compiled inside TruckersMP's tree.
 
@@ -188,7 +188,7 @@ C:\builds\game\src\network\packet_handler.cpp
 
 ---
 
-## 8. Evidence 4 — PE metadata and compiler fingerprint
+## 8. Evidence 4 / PE metadata and compiler fingerprint
 
 | Indicator | Side A | Side B | Match |
 |---|---|---|---|
@@ -200,13 +200,13 @@ C:\builds\game\src\network\packet_handler.cpp
 | Section alignment | 0x1000 | 0x1000 | ✅ |
 | `.text` characteristics | `0x60000020` | `0x60000020` | ✅ |
 
-The Rich header key is derived from the exact toolset and import ordering. An identical key on both sides narrows the build configuration to the same MSVC 14.38 toolchain — which is what makes the §5 byte comparison meaningful.
+The Rich header key is derived from the exact toolset and import ordering. An identical key on both sides narrows the build configuration to the same MSVC 14.38 toolchain / which is what makes the §5 byte comparison meaningful.
 
 > **Note on libc++/libunwind.** v1.0 read the `libunwind` / `NSt3__1` / `basic_string` strings in HaulMP as proof that HaulMP is Clang-built, and concluded the two modules were byte-incomparable. v2.0 corrects this: those strings belong to the statically linked CEF/Chromium payload (Chromium ships libc++ and libunwind), not to HaulMP's own toolchain. Both modules are MSVC 14.38, confirmed by the shared Rich key. This correction is what unlocks §5.
 
 ---
 
-## 9. Evidence 5 — `.pdata` unwind layout
+## 9. Evidence 5 / `.pdata` unwind layout
 
 `.pdata` holds `RUNTIME_FUNCTION` records describing each function's prologue and unwinding. It is generated mechanically from the code layout, so its ordering is a high-entropy fingerprint.
 
@@ -233,7 +233,7 @@ The largest un-normalised identical block (~7,200 contiguous bytes) is a float c
 →  −0.773270, −0.775341, −0.777403, −0.779458, −0.781503  (step ≈ −0.002058)
 ```
 
-Adjacent `.rdata` strings attribute it to Opus (Xiph.Org), and it is absent from `eurotrucks2.exe`. So the Opus tables are third-party and prove nothing on their own — this is precisely where v1.0 stopped.
+Adjacent `.rdata` strings attribute it to Opus (Xiph.Org), and it is absent from `eurotrucks2.exe`. So the Opus tables are third-party and prove nothing on their own / this is precisely where v1.0 stopped.
 
 However, ~9.1 KB of the shared `.rdata` is not attributable to Opus: project-specific constant tables, appearing in the same order in both binaries. And the code in §5 is not explainable by any third-party library at all.
 
@@ -251,19 +251,19 @@ However, ~9.1 KB of the shared `.rdata` is not attributable to Opus: project-spe
 
 Stable byte patterns for the reference builds. Each should be found in both binaries at the listed RVAs.
 
-**SIG-01 — matched at A `0x1C4A20` / B `0x11F8B0`**
+**SIG-01 / matched at A `0x1C4A20` / B `0x11F8B0`**
 
 ```
 48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 56 41 57 48 83 EC 20
 ```
 
-**SIG-02 — matched at A `0x0E72C0` / B `0x0A3190`**
+**SIG-02 / matched at A `0x0E72C0` / B `0x0A3190`**
 
 ```
 40 53 48 83 EC 20 48 8B D9 E8 ?? ?? ?? ?? 48 8B 5B 08
 ```
 
-**SIG-03 — inner loop, matched at A `0x15B8E4` / B `0x0D44A8`**
+**SIG-03 / inner loop, matched at A `0x15B8E4` / B `0x0D44A8`**
 
 ```
 0F 28 04 11 0F 28 4C 11 10 0F 29 04 10 0F 29 4C 10 10
@@ -357,21 +357,21 @@ Normalised function comparison (step 6 of the method) is fastest with Diaphora o
 |---|---|
 | `.text` | PE section holding executable machine code |
 | `.pdata` | x64 exception directory: one `RUNTIME_FUNCTION` per function |
-| RTTI | Run-time type information — recovers compiled C++ class names |
+| RTTI | Run-time type information / recovers compiled C++ class names |
 | Relocation normalisation | Masking absolute addresses / relative displacements before comparison |
 | Rich header | MSVC-only PE header blob; its XOR key fingerprints the toolset |
 | `TimeDateStamp` | PE link timestamp |
-| Opus | Free audio codec (Xiph.Org) — third-party, present in both, non-probative |
-| CEF | Chromium Embedded Framework — ships libc++ and libunwind |
+| Opus | Free audio codec (Xiph.Org) / third-party, present in both, non-probative |
+| CEF | Chromium Embedded Framework / ships libc++ and libunwind |
 
 ---
 
 ## Citation
 
-> *HaulMP ⇄ TruckersMP — Derivative Code Analysis, v2.0.* Pinned to `core_ets2mp.dll` `9f4c1b0e…` and `HaulMP.dll` `4b81d6a3…`. 512 normalised `.text` matches, 88 at exact identity, 11 identical RTTI names.
+> *HaulMP ⇄ TruckersMP / Derivative Code Analysis, v2.0.* Pinned to `core_ets2mp.dll` `9f4c1b0e…` and `HaulMP.dll` `4b81d6a3…`. 512 normalised `.text` matches, 88 at exact identity, 11 identical RTTI names.
 
-The code was copied. The `.rdata` similarity everyone notices is a red herring (Opus), and the `.text` similarity everyone misses is the actual proof — but only after normalising relocations, which is the step that costs an afternoon and that almost nobody performs.
+The code was copied. The `.rdata` similarity everyone notices is a red herring (Opus), and the `.text` similarity everyone misses is the actual proof / but only after normalising relocations, which is the step that costs an afternoon and that almost nobody performs.
 
 ---
 
-*Research: Dizcat — Markdown layout & formatting: DeepSeek V4*
+*Research: Dizcat / Markdown layout & formatting: DeepSeek V4*
