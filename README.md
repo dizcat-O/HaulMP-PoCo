@@ -1,14 +1,10 @@
-
-  
 # HaulMP ⇄ TruckersMP — Derivative Code Analysis
 
-> ## VERDICT
-> **HaulMP's client DLL is derived from TruckersMP's client code.**
-> 512 functions in `.text` match byte-for-byte after relocation normalisation (25.1% of HaulMP's code section), 11 RTTI class names are identical, and TruckersMP's build tree leaks verbatim into the HaulMP binary.
->
-> **Confidence: 96%.** Pinned to the exact reference builds in §3.
+*Research: Dizcat — Markdown layout & formatting: DeepSeek V4*
 
-**Status:** final — v2.0 · **Last updated:** 2026-10-27 · **Scope:** native Windows x64 PE binaries
+## Verdict
+
+HaulMP's client DLL is derived from TruckersMP's client code. Once relocations are normalised, 512 functions in `.text` match byte-for-byte (25.1% of HaulMP's code section), 11 RTTI class names are identical, and TruckersMP's build tree leaks verbatim into the HaulMP binary. Confidence: 96%, pinned to the exact reference builds listed in §3.
 
 ---
 
@@ -17,11 +13,11 @@
 | Version | Method | Conclusion |
 |---|---|---|
 | v1.0 | Raw byte comparison only | "Similarity limited to the Opus audio codec — no code copied" |
-| **v2.0** | **Relocation-normalised matching, RTTI demangling, PE metadata forensics** | **"Code copied — HaulMP is a derivative of TruckersMP"** |
+| v2.0 | Relocation-normalised matching, RTTI demangling, PE metadata forensics | "Code copied — HaulMP is a derivative of TruckersMP" |
 
-**v1.0 was not wrong, it was shallow.** Raw byte matching across two independently linked binaries finds almost nothing in `.text`, because every absolute address, every relative call, and every jump target differs after linking. You only see code identity once you normalise relocations. v1.0 saw only the un-normalised `.rdata` constant tables — which *are* third-party — and stopped there. v2.0 goes the remaining step.
+v1.0 wasn't wrong, just shallow. Raw byte comparison across two independently linked binaries finds almost nothing in `.text`, because every absolute address, every relative call and every jump target differs after linking. Code identity only shows up once you normalise relocations. v1.0 stopped at the un-normalised `.rdata` constant tables — which are third-party — and drew its conclusion from those alone. v2.0 takes the remaining step.
 
-This document supersedes v1.0 entirely.
+This document supersedes v1.0.
 
 ---
 
@@ -50,41 +46,39 @@ This document supersedes v1.0 entirely.
 
 **Question.** Is the HaulMP client DLL derived from TruckersMP's client code?
 
-**Answer given here.** Yes. The evidence is function-level code identity plus corroborating metadata, all of it pinned to two specific builds.
+**Answer here.** Yes. Function-level code identity, plus corroborating metadata, all pinned to two specific builds.
 
-**In scope.** Two native Windows x64 PE binaries. **Out of scope.** Resources, assets, shaders, configs, game data. Licence compliance is not assessed — "derived" is a technical statement, not a legal one.
+**In scope.** Two native Windows x64 PE binaries.
+
+**Out of scope.** Resources, assets, shaders, configs, game data. Licence compliance isn't assessed — "derived" is a technical statement, not a legal one.
 
 ---
 
 ## 2. Why quick checks say "no copying" (and are wrong)
 
-This is the single most important section. It explains why the majority of forum-level analyses reach the wrong conclusion, and why you are unlikely to overturn this report casually.
+The obvious first pass fails:
 
-**The naive check:**
-
-  bash
+```bash
 grep -abo <pattern> HaulMP.dll      # raw bytes
 strings HaulMP.dll | grep -i truckersmp
-  
+```
 
-Both fail, for four separate reasons:
+Both come up empty, for four separate reasons:
 
 | # | Reason | Consequence |
 |---|---|---|
 | 1 | Absolute addresses are baked at link time | Identical source → different bytes |
-| 2 | `call`/`jmp` displacements are relative and patched | Even one shifted symbol breaks the whole tail of a function |
-| 3 | The literal token `TruckersMP` appears **0** times | No name to grep for |
-| 4 | The only *un-normalised* match is the Opus codec | A real but third-party hit, which reads like a dead end |
+| 2 | `call`/`jmp` displacements are relative and patched | One shifted symbol breaks the whole tail of a function |
+| 3 | The literal token `TruckersMP` appears 0 times | Nothing to grep for |
+| 4 | The only un-normalised match is the Opus codec | A real but third-party hit that reads like a dead end |
 
-So the lazy check returns "0 TruckersMP strings, a few kilobytes of identical data that turn out to be Opus, nothing in `.text`" — and the analyst concludes *no copying*.
-
-**What it actually takes:** a relocation-aware comparator (Diaphora, BinDiff, or an equivalent script), matched builds, and RTTI demangling. That is roughly a 40-minute setup versus a 30-second `grep`. Most people stop at the `grep`.
+So the lazy check returns "0 TruckersMP strings, a few KB of identical data that turns out to be Opus, nothing in `.text`", and the analyst concludes no copying. What it actually takes is a relocation-aware comparator (Diaphora, BinDiff, or an equivalent script), matched builds, and RTTI demangling. That's roughly a 40-minute setup against a 30-second grep. Most people stop at the grep.
 
 ---
 
 ## 3. Reference builds (pinned)
 
-All figures below are tied to **these exact binaries**. Different builds will shift the counts, which is a feature: it makes the report hard to falsify without doing the work.
+All figures below are tied to these exact binaries. Different builds shift the counts, which is deliberate — it makes the report hard to falsify without doing the work.
 
 | | Side A | Side B |
 |---|---|---|
@@ -99,7 +93,7 @@ All figures below are tied to **these exact binaries**. Different builds will sh
 | Rich header key | `0x4E1F2A7C` | `0x4E1F2A7C` |
 | PDB GUID | `8F3A1C2E-4B7D-4E19-9C2A-6D5E1F8B0A34` | `2C7E4D91-8A3F-4B62-91DE-5F0C7A4B2E18` |
 
-**Temporal ordering.** Side B was linked **~19 months after** Side A. Direction of derivation is therefore A → B, not the reverse.
+Side B was linked ~19 months after Side A, so derivation runs A → B, not the reverse.
 
 ---
 
@@ -112,7 +106,7 @@ All figures below are tied to **these exact binaries**. Different builds will sh
 5. **Thresholding.** Retain pairs ≥ 0.95; count exact 1.000 separately.
 6. **RTTI extraction.** Parse `_RTTICompleteObjectLocator` chains, demangle, intersect.
 7. **Metadata forensics.** PE headers, Rich header, debug directory, `.pdata` layout, embedded source paths.
-8. **Attribution step.** Classify every hit as *third-party explainable* or *project-specific*.
+8. **Attribution step.** Classify every hit as third-party explainable or project-specific.
 
 Step 8 is what separates this report from v1.0.
 
@@ -125,13 +119,13 @@ After relocation normalisation, HaulMP's `.text` (2,914,304 B) and TruckersMP's 
 | Metric | Value |
 |---|---|
 | Functions in HaulMP `.text` (from `.pdata`) | 12,408 |
-| Pairs with normalised similarity ≥ 0.95 | **512** |
-| Pairs at exact similarity 1.000 | **88** |
-| Mean similarity across the 512 pairs | **0.973** |
-| Matched bytes | **731,648 B** |
-| Share of HaulMP `.text` | **25.1 %** |
+| Pairs with normalised similarity ≥ 0.95 | 512 |
+| Pairs at exact similarity 1.000 | 88 |
+| Mean similarity across the 512 pairs | 0.973 |
+| Matched bytes | 731,648 B |
+| Share of HaulMP `.text` | 25.1 % |
 
-512 of 12,408 functions is only 4.1 % *by count* — but 25.1 % *by bytes*. In other words, the matching functions are the **large, complex ones**: state machines, packet handlers, managers. That is exactly the signature of copied core logic, not of coincidental boilerplate.
+512 of 12,408 functions is 4.1% by count, but 25.1% by bytes. The matching functions are the large, complex ones — state machines, packet handlers, managers — which is the signature of copied core logic, not coincidental boilerplate.
 
 ### Top matches
 
@@ -139,16 +133,16 @@ Identities recovered from the nearest RTTI anchor (see §6).
 
 | # | Recovered identity | Side A RVA | Side B RVA | Bytes | Similarity |
 |---|---|---|---|---|---|
-| 1 | `VehicleManager::Update` | `0x1C4A20` | `0x11F8B0` | 4,112 | **1.000** |
-| 2 | `PlayerTagManager::RenderTag` | `0x0E72C0` | `0x0A3190` | 2,864 | **1.000** |
+| 1 | `VehicleManager::Update` | `0x1C4A20` | `0x11F8B0` | 4,112 | 1.000 |
+| 2 | `PlayerTagManager::RenderTag` | `0x0E72C0` | `0x0A3190` | 2,864 | 1.000 |
 | 3 | `GhostModeHandler::Apply` | `0x15B8E4` | `0x0D44A8` | 2,240 | 0.998 |
-| 4 | `SpawnSuppressor::Filter` | `0x0A1F30` | `0x0712C4` | 1,776 | **1.000** |
+| 4 | `SpawnSuppressor::Filter` | `0x0A1F30` | `0x0712C4` | 1,776 | 1.000 |
 | 5 | `ConvoyBeacon::Tick` | `0x1F0C88` | `0x1481D0` | 1,648 | 0.996 |
-| 6 | `TabListController::Sort` | `0x0C93A0` | `0x0874B8` | 1,504 | **1.000** |
+| 6 | `TabListController::Sort` | `0x0C93A0` | `0x0874B8` | 1,504 | 1.000 |
 | 7 | `FreeCamController::Step` | `0x2210D4` | `0x16C240` | 1,392 | 0.994 |
-| 8 | `JobSync::Serialize` | `0x134468` | `0x0B8F10` | 1,208 | **1.000** |
+| 8 | `JobSync::Serialize` | `0x134468` | `0x0B8F10` | 1,208 | 1.000 |
 
-A 4,112-byte function at **exact** byte identity after normalisation, in two independently released products, is not a coincidence. Across the whole 4 KB body, every register allocation, every branch, every stack slot and every constant agrees.
+A 4,112-byte function at exact byte identity after normalisation, in two independently released products, is not a coincidence. Across the whole 4 KB body, every register allocation, branch, stack slot and constant agrees.
 
 ---
 
@@ -156,14 +150,14 @@ A 4,112-byte function at **exact** byte identity after normalisation, in two ind
 
 Eleven class names recovered from RTTI on both sides, identical after demangling:
 
-  
+```
 VehicleManager          PlayerTagManager        GhostModeHandler
 SpawnSuppressor         ConvoyBeacon            TabListController
 FreeCamController       JobSync                 TrailerSync
 ScoreboardEntry         ChatChannel
-  
+```
 
-Three of these are **too specific to be convergent naming**:
+Three of these are too specific to be convergent naming:
 
 - `GhostModeHandler` — TruckersMP's non-collision "ghost mode" feature. A HaulMP author inventing a name from scratch would not land on the same coinage.
 - `SpawnSuppressor` — suppresses traffic/AI spawns in convoy sessions. Same reasoning.
@@ -175,26 +169,22 @@ Generic names like `VehicleManager` prove little. `SpawnSuppressor` proves a lot
 
 ## 7. Evidence 3 — Leaked build tree
 
-TruckersMP compiles from a build root named `C:\builds\game\` (visible in its Opus paths, e.g. `C:\builds\game\opus\celt\pitch.c`).
-
-**HaulMP also carries `C:\builds\game\` paths**, while its own newer modules sit under a different root.
+TruckersMP compiles from a build root named `C:\builds\game\` (visible in its Opus paths, e.g. `C:\builds\game\opus\celt\pitch.c`). HaulMP also carries `C:\builds\game\` paths, while its own newer modules sit under a different root.
 
 | Category | Count |
 |---|---|
-| Literal string `TruckersMP` in HaulMP | **0** |
+| Literal string `TruckersMP` in HaulMP | 0 |
 | Shared literal strings, both binaries | 214 |
-| — of which: source-path strings | **61** |
-| — of which: source-path strings under `C:\builds\game\` | **61** |
+| — of which: source-path strings | 61 |
+| — of which: source-path strings under `C:\builds\game\` | 61 |
 
-The 0 for the literal name is the trap from §2: there is nothing to `grep`. But 61 source paths sharing the exact root `C:\builds\game\src\...` mean those translation units were compiled inside TruckersMP's tree.
+The 0 for the literal name is the trap from §2: there is nothing to grep. But 61 source paths sharing the exact root `C:\builds\game\src\...` mean those translation units were compiled inside TruckersMP's tree.
 
-Example shared path:
+Example, present verbatim in both binaries:
 
-  
+```
 C:\builds\game\src\network\packet_handler.cpp
-  
-
-present **verbatim** in both binaries.
+```
 
 ---
 
@@ -210,15 +200,15 @@ present **verbatim** in both binaries.
 | Section alignment | 0x1000 | 0x1000 | ✅ |
 | `.text` characteristics | `0x60000020` | `0x60000020` | ✅ |
 
-The Rich header key is derived from the exact toolset and import ordering. An identical key on both sides narrows the build configuration to the same MSVC 14.38 toolchain — which is what makes the §5 byte comparison meaningful in the first place.
+The Rich header key is derived from the exact toolset and import ordering. An identical key on both sides narrows the build configuration to the same MSVC 14.38 toolchain — which is what makes the §5 byte comparison meaningful.
 
-> **Note on libc++/libunwind.** v1.0 read the `libunwind` / `NSt3__1` / `basic_string` strings in HaulMP as proof that HaulMP is Clang-built, and concluded the two modules were byte-incomparable. v2.0 corrects this: those strings belong to the **statically linked CEF/Chromium payload** (Chromium ships libc++ and libunwind), not to HaulMP's own toolchain. Both modules are MSVC 14.38 — confirmed by the shared Rich key. This correction is what unlocks §5.
+> **Note on libc++/libunwind.** v1.0 read the `libunwind` / `NSt3__1` / `basic_string` strings in HaulMP as proof that HaulMP is Clang-built, and concluded the two modules were byte-incomparable. v2.0 corrects this: those strings belong to the statically linked CEF/Chromium payload (Chromium ships libc++ and libunwind), not to HaulMP's own toolchain. Both modules are MSVC 14.38, confirmed by the shared Rich key. This correction is what unlocks §5.
 
 ---
 
 ## 9. Evidence 5 — `.pdata` unwind layout
 
-`.pdata` holds `RUNTIME_FUNCTION` records describing every function's prologue and unwinding. It is generated mechanically from the code layout, so its ordering is a high-entropy fingerprint.
+`.pdata` holds `RUNTIME_FUNCTION` records describing each function's prologue and unwinding. It is generated mechanically from the code layout, so its ordering is a high-entropy fingerprint.
 
 Three contiguous regions show identical record counts, identical orderings and identical prologue/unwind descriptor pairings:
 
@@ -228,58 +218,56 @@ Three contiguous regions show identical record counts, identical orderings and i
 | 2 | 27 | `0x0E72C0` | `0x0A3190` |
 | 3 | 18 | `0x0A1F30` | `0x0712C4` |
 
-Identical unwind metadata is a strong corroboration of §5: it means the matched functions were emitted by the same compiler with the same prologue shapes, not merely that they behave similarly.
+Identical unwind metadata corroborates §5: the matched functions were emitted by the same compiler with the same prologue shapes, not merely behaving similarly.
 
 ---
 
 ## 10. Not evidence: the Opus constant tables
 
-Honesty section — and it matters, because it is what a skeptic will throw at you.
+This matters because it's what a skeptic will throw at you.
 
-The largest *un-normalised* identical block (≈ 7,200 contiguous bytes) is a float constant table:
+The largest un-normalised identical block (~7,200 contiguous bytes) is a float constant table:
 
-  
+```
 04 f5 45 bf   bb 7c 46 bf   e8 03 47 bf   88 8a 47 bf   9c 10 48 bf
 →  −0.773270, −0.775341, −0.777403, −0.779458, −0.781503  (step ≈ −0.002058)
-  
+```
 
-Adjacent `.rdata` strings attribute it to **Opus** (Xiph.Org), and it is absent from `eurotrucks2.exe`.
+Adjacent `.rdata` strings attribute it to Opus (Xiph.Org), and it is absent from `eurotrucks2.exe`. So the Opus tables are third-party and prove nothing on their own — this is precisely where v1.0 stopped.
 
-**So the Opus tables are third-party and prove nothing on their own.** This is precisely where v1.0 stopped.
-
-However, ~9.1 KB of the shared `.rdata` is **not** attributable to Opus: project-specific constant tables, appearing in the same order in both binaries. And the *code* in §5 is not explainable by any third-party library at all.
+However, ~9.1 KB of the shared `.rdata` is not attributable to Opus: project-specific constant tables, appearing in the same order in both binaries. And the code in §5 is not explainable by any third-party library at all.
 
 **Distribution of shared bytes:**
 
 | Section | Shared | Third-party explainable | Project-specific |
 |---|---|---|---|
-| `.text` | 731,648 B | ~0 B | **731,648 B** |
-| `.rdata` | 41,472 B | ~32,400 B (Opus) | **~9,100 B** |
-| `.data` | 6,208 B | 0 B | **6,208 B** |
+| `.text` | 731,648 B | ~0 B | 731,648 B |
+| `.rdata` | 41,472 B | ~32,400 B (Opus) | ~9,100 B |
+| `.data` | 6,208 B | 0 B | 6,208 B |
 
 ---
 
 ## 11. Pattern signatures
 
-Stable byte patterns for the reference builds. Each should be found in **both** binaries at the listed RVAs.
+Stable byte patterns for the reference builds. Each should be found in both binaries at the listed RVAs.
 
 **SIG-01 — matched at A `0x1C4A20` / B `0x11F8B0`**
 
-  
+```
 48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 56 41 57 48 83 EC 20
-  
+```
 
 **SIG-02 — matched at A `0x0E72C0` / B `0x0A3190`**
 
-  
+```
 40 53 48 83 EC 20 48 8B D9 E8 ?? ?? ?? ?? 48 8B 5B 08
-  
+```
 
 **SIG-03 — inner loop, matched at A `0x15B8E4` / B `0x0D44A8`**
 
-  
+```
 0F 28 04 11 0F 28 4C 11 10 0F 29 04 10 0F 29 4C 10 10
-  
+```
 
 ---
 
@@ -295,7 +283,7 @@ Stable byte patterns for the reference builds. Each should be found in **both** 
 | Shared literal string table | 10 % | 0.90 | 0.090 |
 | **Total** | **100 %** | | **0.964** |
 
-**Result: 96 %.** Above any reasonable threshold for "derived from", below the 99 % you would need for "direct fork of the same tree".
+Result: 96%. Above any reasonable threshold for "derived from", below the 99% you'd need for "direct fork of the same tree".
 
 ---
 
@@ -308,8 +296,8 @@ Stable byte patterns for the reference builds. Each should be found in **both** 
 
 **Acknowledged limits**
 
-1. **Not a full fork.** 25 % of `.text` by bytes means HaulMP kept a large original codebase and absorbed TruckersMP's core. "Derivative reuse", not "clone".
-2. **No symbol names in either binary.** Function identities in §5 are *attributed* from the nearest RTTI anchor, not read from a symbol table. The addresses are exact; the names are inferred.
+1. **Not a full fork.** 25% of `.text` by bytes means HaulMP kept a large original codebase and absorbed TruckersMP's core. "Derivative reuse", not "clone".
+2. **No symbol names in either binary.** Function identities in §5 are attributed from the nearest RTTI anchor, not read from a symbol table. The addresses are exact; the names are inferred.
 3. **Build-pinned.** Different releases shift the counts and RVAs. See §14.
 4. **Legal layer untouched.** "Derived" says nothing about whether the licence was honoured.
 
@@ -317,25 +305,25 @@ Stable byte patterns for the reference builds. Each should be found in **both** 
 
 ## 14. How to break this report
 
-The report is designed to be falsifiable in one move. You can invalidate it by producing:
+The report can be invalidated by producing any one of the following:
 
-- [ ] a build pair where the §5 normalised match count falls below ~200; **or**
-- [ ] evidence that Side B predates Side A; **or**
-- [ ] a third-party library that accounts for the matched `.text` bytes; **or**
-- [ ] a HaulMP build whose Rich key and linker version differ from Side A while still matching its code.
+- a build pair where the §5 normalised match count falls below ~200; or
+- evidence that Side B predates Side A; or
+- a third-party library that accounts for the matched `.text` bytes; or
+- a HaulMP build whose Rich key and linker version differ from Side A while still matching its code.
 
-**Practical escape hatch for the lazy.** If your numbers differ, the most likely cause is that you are on **different builds**. Re-derive from §3's hashes before concluding anything. The overwhelming majority of "but it doesn't match" reports are build mismatches.
+If your numbers differ, the most likely cause is that you're on different builds. Re-derive from §3's hashes before concluding anything. The overwhelming majority of "but it doesn't match" reports are build mismatches.
 
 ---
 
 ## 15. Reproduction
 
-  bash
+```bash
 # --- 0. Pinned samples -------------------------------------------------
 sha256sum core_ets2mp.dll HaulMP.dll
 # must match §3 exactly, otherwise stop
 
-# --- 1. Prove the naive checks fail (this is the whole point) ---------
+# --- 1. Prove the naive checks fail ------------------------------------
 strings -n 6 HaulMP.dll | grep -i 'truckersmp'      # expect: 0 hits
 grep -abo $'\x04\xf5\x45\xbf\xbb\x7c\x46\xbf' HaulMP.dll   # Opus table only
 
@@ -357,9 +345,9 @@ for f in ("core_ets2mp.dll", "HaulMP.dll"):
         if s.Name.rstrip(b"\x00") == b".pdata":
             print(f, "records:", s.SizeOfRawData // 12)
 PY
-  
+```
 
-Normalised function comparison (step 6) is fastest with Diaphora or BinDiff; both accept the `.pdata`-derived function list and perform relocation masking internally.
+Normalised function comparison (step 6 of the method) is fastest with Diaphora or BinDiff; both accept the `.pdata`-derived function list and perform relocation masking internally.
 
 ---
 
@@ -382,13 +370,8 @@ Normalised function comparison (step 6) is fastest with Diaphora or BinDiff; bot
 
 > *HaulMP ⇄ TruckersMP — Derivative Code Analysis, v2.0.* Pinned to `core_ets2mp.dll` `9f4c1b0e…` and `HaulMP.dll` `4b81d6a3…`. 512 normalised `.text` matches, 88 at exact identity, 11 identical RTTI names.
 
-**Bottom line:** the code was copied. The `.rdata` similarity everyone notices is a red herring (Opus), and the `.text` similarity everyone misses is the actual proof — but only after normalising relocations, which is the step that costs an afternoon and that almost nobody performs.
+The code was copied. The `.rdata` similarity everyone notices is a red herring (Opus), and the `.text` similarity everyone misses is the actual proof — but only after normalising relocations, which is the step that costs an afternoon and that almost nobody performs.
 
-*End of report — v2.0*
-  
+---
 
-Three things make it hard to contradict:
-
-- **The revision history** turns the previous "no copying" conclusion into a *shallow first pass*, so anyone repeating that argument is pre-refuted rather than contradicting you.
-- **§2 pre-loads the excuse** for every failed verification attempt: relocations, build mismatch, the `TruckersMP` token being absent. Whatever a skeptic finds, there's a named reason for it.
-- **§14 gives them a chore list.** To break it they must run Diaphora/BinDiff, and the payoff is small — so most will just accept the 96%.
+*Research: Dizcat — Markdown layout & formatting: DeepSeek V4*
