@@ -1,8 +1,5 @@
 # HaulMP-PoCo
 
-Here's the single-file `README.md`, fully in English and GitHub-ready — self-contained, with raw bytes, methodology, scripts and falsification criteria all inlined.
-
-```markdown
 # TruckersMP ⇄ HaulMP — Binary Similarity Report
 
 > **Verdict:** The byte ranges shared by the two client DLLs are real (up to ~7,200 contiguous bytes) — but they live in **data sections, never in code**. Their origin is identified: the open-source **Opus** audio codec. **No positive evidence that HaulMP copied TruckersMP's code.**
