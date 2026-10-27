@@ -1,6 +1,6 @@
 # HaulMP-PoCo
 
-# TruckersMP ⇄ HaulMP — Binary Similarity Report
+# TruckersMP ⇄ HaulMP
 
 > **Verdict:** The byte ranges shared by the two client DLLs are real (up to ~7,200 contiguous bytes) — but they live in **data sections, never in code**. Their origin is identified: the open-source **Opus** audio codec. **No positive evidence that HaulMP copied TruckersMP's code.**
 
